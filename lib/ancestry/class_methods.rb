@@ -155,5 +155,12 @@ module Ancestry
         node.update_attribute depth_cache_column, node.depth
       end
     end
+
+    def rebuild_descendants_count_cache!
+      raise Ancestry::AncestryException.new("Cannot rebuild descendants count cache for model without descendants cacheing.") unless respond_to? :descendants_count_column
+      self.base_class.find_each do |node|
+        node.parent.update_attribute descendants_count_column, node.parent.descendants.count if node.parent_id
+      end
+    end
   end
 end

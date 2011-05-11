@@ -79,6 +79,11 @@ The has_ancestry methods supports the following options:
                          - Migrate: add_column [table], :ancestry_depth, :integer, :default => 0
                          - Build cache: TreeNode.rebuild_depth_cache!
   :depth_cache_column    Pass in a symbol to store depth cache in a different column
+  :descendants_count     Cache the number of descendants a node has in the 'descendants_count' column (default: false)
+                         If you turn descendants_count caching on for an existing model:
+                         - Migrate: add_column [table], :descendants_count, :integer, :default => 0, :null => false
+                         - Build cache: Model.rebuild_descendants_count_cache!
+  :descendants_count_column Pass in a symbol to store descendants_count in a different column
   :primary_key_format    Supply a regular expression that matches the format of your primary key.
                          By default, primary keys only match integers ([0-9]+).
 
@@ -105,6 +110,14 @@ Thanks to some convenient rails magic, it is even possible to create nodes throu
   node.siblings.create!
   TestNode.children_of(node_id).new
   TestNode.siblings_of(node_id).create
+
+= Selecting nodes by descendants count
+
+When descendants_count caching is enabled (see has_ancestry options), you have one additional provided scope:
+  
+  has_descendants         Return nodes that have descendants
+
+This is useful for when you want to know which nodes have descendants. You can even sort by descendants_count to see which node has the most, or least, number of descendants.
 
 = Selecting nodes by depth
 

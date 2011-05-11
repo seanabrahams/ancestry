@@ -7,7 +7,7 @@ class << ActiveRecord::Base
     # Check options
     raise Ancestry::AncestryException.new("Options for has_ancestry must be in a hash.") unless options.is_a? Hash
     options.each do |key, value|
-      unless [:ancestry_column, :orphan_strategy, :cache_depth, :depth_cache_column, :primary_key_format].include? key
+      unless [:ancestry_column, :orphan_strategy, :cache_depth, :depth_cache_column, :primary_key_format, :cache_descendants_count, :descendants_count_column].include? key
         raise Ancestry::AncestryException.new("Unknown option for has_ancestry: #{key.inspect} => #{value.inspect}.")
       end
     end
@@ -72,7 +72,7 @@ class << ActiveRecord::Base
       # Validate depth column
       validates_numericality_of depth_cache_column, :greater_than_or_equal_to => 0, :only_integer => true, :allow_nil => false
     end
-    
+   
     # Create named scopes for depth
     {:before_depth => '<', :to_depth => '<=', :at_depth => '=', :from_depth => '>=', :after_depth => '>'}.each do |scope_name, operator|
       send scope_method, scope_name, lambda { |depth|
@@ -80,6 +80,23 @@ class << ActiveRecord::Base
         {:conditions => ["#{depth_cache_column} #{operator} ?", depth]}
       }
     end
+
+    # Create descendants count column accessor and set to option or default
+    if options[:cache_descendants_count]
+      self.cattr_accessor :descendants_count_column
+      self.descendants_count_column = options[:descendants_count_column] || :descendants_count
+
+      # Cache descendants count in parent descendants count column after save
+      after_save :cache_descendants_count
+
+      validates_numericality_of descendants_count_column, :greather_than_or_equal_to => 0, :only_integer => true, :allow_nil => false
+    end
+
+    send scope_method, :has_descendants, lambda { 
+      raise Ancestry::AncestryException.new("Named scope 'has_descendants' is only available when descendant count caching is enabled.") unless options[:cache_descendants_count]
+      {:conditions => "#{descendants_count_column} > 0"}
+    } 
+
   end
   
   # Alias has_ancestry with acts_as_tree, if it's available.

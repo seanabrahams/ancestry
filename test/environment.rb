@@ -16,11 +16,13 @@ class AncestryTestDatabase
     width         = options.delete(:width) || 0
     extra_columns = options.delete(:extra_columns)
     primary_key_type = options.delete(:primary_key_type) || :default
+    descendants   = options.delete(:descendents) || 0
 
     ActiveRecord::Base.connection.create_table 'test_nodes', :id => (primary_key_type == :default) do |table|
       table.string :id, :null => false if primary_key_type == :string
       table.string options[:ancestry_column] || :ancestry
       table.integer options[:depth_cache_column] || :ancestry_depth if options[:cache_depth]
+      table.integer options[:descendants_count_column] || :descendants_count, :default => 0, :null => false if options[:cache_descendants_count]
       extra_columns.each do |name, type|
         table.send type, name
       end unless extra_columns.nil?
@@ -42,6 +44,7 @@ class AncestryTestDatabase
       else
         yield model
       end
+
     ensure
       ActiveRecord::Base.connection.drop_table 'test_nodes'
       remove_const "TestNode"

@@ -455,6 +455,90 @@ class HasAncestryTreeTest < ActiveSupport::TestCase
     end
   end
 
+  def test_descendants_count_caching
+    AncestryTestDatabase.with_model :cache_descendants_count => true, :descendants_count_column => :descendants_count do |model|
+      parent = model.create!
+      assert_equal 0, parent.descendants_count
+
+      # For some reason .create! doesn't have parent in db upon callback so using .new and .save
+      child = parent.children.new
+      child.save
+      assert_equal 1, child.parent.descendants_count
+      assert_equal 0, child.descendants_count
+
+      sibling = child.siblings.new
+      sibling.save
+      assert_equal 2, sibling.parent.descendants_count
+      assert_equal 0, sibling.descendants_count
+      child.reload
+      assert_equal 0, child.descendants_count
+
+      grandchild = child.children.new
+      grandchild.save
+      assert_equal 3, grandchild.root.descendants_count
+      assert_equal 1, grandchild.parent.descendants_count
+      sibling.reload
+      assert_equal 0, sibling.descendants_count
+      grandchild.reload
+      assert_equal 0, grandchild.descendants_count
+
+      # Test scope
+      assert_equal 2, model.has_descendants.count
+    end
+  end
+
+  def test_descendants_count_caching_custom_column_name
+    AncestryTestDatabase.with_model :cache_descendants_count => true, :descendants_count_column => :d_count do |model|
+      parent = model.create!
+      child = parent.children.new
+      child.save
+
+      assert_equal 1, child.parent.d_count
+      assert_equal 0, child.d_count
+
+      assert_raise NoMethodError do
+        child.descendants_count
+      end
+    end
+  end
+
+  def test_descendants_count_scopes_unavailable
+    AncestryTestDatabase.with_model do |model|
+      assert_raise Ancestry::AncestryException do
+        model.has_descendants
+      end
+    end
+  end
+  
+  def test_rebuild_descendants_count
+    AncestryTestDatabase.with_model :cache_descendants_count => true, :descendants_count_column => :descendants_count do |model|
+      parent = model.create!
+      # For some reason .create! doesn't have parent in db upon callback so using .new and .save
+      child = parent.children.new
+      child.save
+      grandchild = child.children.new
+      grandchild.save
+
+      model.connection.execute("update test_nodes set descendants_count = 0;")
+
+      # Assert cache was emptied correctly
+      model.all.each do |test_node|
+        assert_equal 0, test_node.descendants_count
+      end
+
+      # Rebuild cache
+      model.rebuild_descendants_count_cache!
+
+      # Assert cache was rebuilt correctly
+      parent.reload
+      assert_equal 2, parent.descendants_count
+      child.reload
+      assert_equal 1, child.descendants_count
+      grandchild.reload
+      assert_equal 0, grandchild.descendants_count
+    end
+  end
+
   def test_depth_caching
     AncestryTestDatabase.with_model :depth => 3, :width => 3, :cache_depth => true, :depth_cache_column => :depth_cache do |model, roots|
       roots.each do |lvl0_node, lvl0_children|
