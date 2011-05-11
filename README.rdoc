@@ -79,7 +79,7 @@ The has_ancestry methods supports the following options:
                          - Migrate: add_column [table], :ancestry_depth, :integer, :default => 0
                          - Build cache: TreeNode.rebuild_depth_cache!
   :depth_cache_column    Pass in a symbol to store depth cache in a different column
-  :descendants_count     Cache the number of descendants a node has in the 'descendants_count' column (default: false)
+  :cache_descendants_count Cache the number of descendants a node has in the 'descendants_count' column (default: false)
                          If you turn descendants_count caching on for an existing model:
                          - Migrate: add_column [table], :descendants_count, :integer, :default => 0, :null => false
                          - Build cache: Model.rebuild_descendants_count_cache!

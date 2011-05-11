@@ -5,11 +5,6 @@ module Ancestry
       add_error_to_base "#{self.class.name.humanize} cannot be a descendant of itself." if ancestor_ids.include? self.id
     end
 
-    # Update parent with descendants count if using cache_column option
-    def update_parent_descendants_count
-
-    end
-
     # Update descendants with new ancestry
     def update_descendants_with_new_ancestry
       # Skip this if callbacks are disabled
